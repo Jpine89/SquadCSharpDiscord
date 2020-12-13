@@ -2,6 +2,7 @@
 using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -258,30 +259,13 @@ namespace SquadCSharpDiscord
 
             var cfg = new DiscordConfiguration
             {
-                Token = "",
+                Token = ConfigurationManager.AppSettings.Get("20r_token"),
                 TokenType = TokenType.Bot
             };
 
             this.Client = new DiscordClient(cfg);
-            //var discord = new DiscordClient(new DiscordConfiguration()
-            //{
-            //    Token = "Nzg3NDYzMTYxOTQyNzY5Njk1.X9VUOA.KXPFpHiuDEi2_EIKbsQrKGH_EG4",
-            //    TokenType = TokenType.Bot
-            //});
-
-            //Client.MessageCreated += async (e) =>
-            //{
-            //    if (e.Message.Content.ToLower().StartsWith("ping"))
-            //    {
-            //        await e.Channel.SendMessageAsync(e.Channel.ToString());
-            //    }
-            //};
-
-            //var test = await Client.GetChannelAsync(787524708546510848);
-            //Client.SendMessageAsync(test, "Test");
 
             await Client.ConnectAsync();
-            //await Task.Delay(-1);
         }
 
 

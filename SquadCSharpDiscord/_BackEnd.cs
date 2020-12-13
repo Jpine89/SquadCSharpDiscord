@@ -1,7 +1,9 @@
-﻿using MySql.Data.MySqlClient;
+﻿using DSharpPlus;
+using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace SquadCSharpDiscord
 {
@@ -23,6 +25,8 @@ namespace SquadCSharpDiscord
         private string C_ID;
         private string steamID;
 
+        public DiscordClient Client { get; set; }
+
         public _BackEnd()
         {
             C_ID = "";
@@ -35,6 +39,8 @@ namespace SquadCSharpDiscord
 
             _AllPatterns = new Dictionary<string, string>();
             regexSetup();
+
+            MainAsync().GetAwaiter().GetResult();
         }
 
         private void regexSetup()
@@ -76,6 +82,7 @@ namespace SquadCSharpDiscord
 
                         if (String.IsNullOrEmpty(attackerResult))
                         {
+                            sendMessageTeamKill(substring[2], cIDResult);
                             Console.WriteLine("There was a Potential TeamKill");
                             Console.WriteLine("The Victim Team was: " + victimResult);
                             Console.WriteLine(line);
@@ -85,6 +92,7 @@ namespace SquadCSharpDiscord
 
                         if (victimResult.Equals(attackerResult))
                         {
+                            sendMessageTeamKill(substring[2], cIDResult);
                             Console.WriteLine("There was a TeamKill");
                             Console.WriteLine(line);
                         }
@@ -214,6 +222,8 @@ namespace SquadCSharpDiscord
                         {
                             adminInCameraDic.Add(substring[2], "Active");
                         }
+                        sendMessageAdmin(substring);
+                        Console.WriteLine(line);
                         //_SQL = "INSERT INTO adminlog (userName, logMessage) VALUES (@userName, @logMessage)";
                         //cmd = new MySqlCommand(_SQL, conn);
                         //cmd.Parameters.Add("@userName", MySqlDbType.VarChar).Value = substring[2];
@@ -225,5 +235,55 @@ namespace SquadCSharpDiscord
                     break;
             }
         }
+
+        public async Task sendMessageAdmin(string[] _subString)
+        {
+            var returnValue ="```" + _subString[2] + " Has Entered Admin Cam at:: " + DateTime.Now.ToString("ddd, dd MMM yyy HH’:’mm’:’ss ‘GMT’" + "```");
+
+            var AdminCam = await Client.GetChannelAsync(787524708546510848);
+            await Client.SendMessageAsync(AdminCam, returnValue);
+        }
+
+        public async Task sendMessageTeamKill(string Victim, string Attacker)
+        {
+            var returnValue = "```" + Victim + " \nWas Killed by:\n" + Attacker + "```";
+
+
+            var TeamKill = await Client.GetChannelAsync(787524643564814366);
+            await Client.SendMessageAsync(TeamKill, returnValue);
+        }
+
+        public async Task MainAsync()
+        {
+
+            var cfg = new DiscordConfiguration
+            {
+                Token = "",
+                TokenType = TokenType.Bot
+            };
+
+            this.Client = new DiscordClient(cfg);
+            //var discord = new DiscordClient(new DiscordConfiguration()
+            //{
+            //    Token = "Nzg3NDYzMTYxOTQyNzY5Njk1.X9VUOA.KXPFpHiuDEi2_EIKbsQrKGH_EG4",
+            //    TokenType = TokenType.Bot
+            //});
+
+            //Client.MessageCreated += async (e) =>
+            //{
+            //    if (e.Message.Content.ToLower().StartsWith("ping"))
+            //    {
+            //        await e.Channel.SendMessageAsync(e.Channel.ToString());
+            //    }
+            //};
+
+            //var test = await Client.GetChannelAsync(787524708546510848);
+            //Client.SendMessageAsync(test, "Test");
+
+            await Client.ConnectAsync();
+            //await Task.Delay(-1);
+        }
+
+
     }
 }

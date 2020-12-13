@@ -8,10 +8,6 @@ namespace SquadCSharpDiscord
 {
     class Program
     {
-        //static string _20rIP = ConfigurationManager.AppSettings.Get("20r_IP");
-        //static ushort _20rPort = Convert.ToUInt16(ConfigurationManager.AppSettings.Get("20r_Port"));
-        //static string _20rPass = ConfigurationManager.AppSettings.Get("20r_Pass");
-        //private SqlConnection _conn;
         static async Task Main(string[] args)
         {
             Boolean userJoining = false;

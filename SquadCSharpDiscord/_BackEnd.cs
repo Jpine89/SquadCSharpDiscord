@@ -55,10 +55,10 @@ namespace SquadCSharpDiscord
             _AllPatterns.Add("newGame", "\\[([0-9.:-]+)][[ 0-9]*]LogWorld: Bringing World \\/([A-z]+)\\/Maps\\/([A-z]+)\\/(?:Gameplay_Layers\\/)?([A-z0-9_]+)");
             _AllPatterns.Add("playerDamaged", "\\[([0-9.:-]+)][[ 0-9]*]LogSquad: Player:(.+) ActualDamage=([0-9.]+) from (.+) caused by ([A-z_0-9]+)_C");
             _AllPatterns.Add("playerDied", "\\[([0-9.:-]+)][[ 0-9]*]LogSquadTrace: \\[DedicatedServer](?:ASQSoldier::)?Die\\(\\): Player:(.+) KillingDamage=(?:-)*([0-9.]+) from BP_PlayerController_([A-z_0-9]+) caused by ([A-z_0-9]+)");
-            _AllPatterns.Add("playerPosses", "\\[([0-9.:-]+)][[ 0-9]*]LogSquadTrace: \\[DedicatedServer](?:ASQPlayerController::)?OnPossess\\(\\): PC=(.+) Pawn=([A-z0-9_]+)_C");
+            _AllPatterns.Add("playerPosses", "\\[([0-9.:-]+)][[ 0-9]*]LogSquadTrace: .+ PC=(.+) Pawn=([A-z0-9_]+)_C");
             _AllPatterns.Add("playerUnPosses", "\\[([0-9.:-]+)][[ 0-9]*]LogSquadTrace: \\[DedicatedServer](?:ASQPlayerController::)?OnUnPossess\\(\\): PC=(.+)");
             _AllPatterns.Add("playerRevived", "\\[([0-9.:-]+)][[ 0-9]*]LogSquad: (.+) has revived (.+)\\.");
-            _AllPatterns.Add("playerWounded", "\\[([0-9.:-]+)][[ 0-9]*]LogSquadTrace: \\[DedicatedServer](?:ASQSoldier::)?Wound\\(\\): Player:(.+) KillingDamage=(?:-)*([0-9.]+) from ([A-z_0-9]+) caused by ([A-z_0-9]+)_C");
+            _AllPatterns.Add("playerWounded", "\\[([0-9.]+)-([0-9.]+):[0-9\\[\\]]+].+Wound\\(\\): Player:(.+) KillingDamage.+ from BP_PlayerController_(.+) caused by (.+)");
             //_AllPatterns.Add("serverTick", "\\[([0-9.:-]+)][[ 0-9]*]LogSquad: USQGameState: Server Tick Rate: ([0-9.]+)");
             _AllPatterns.Add("roundWinner", "\\[([0-9.:-]+)][[ 0-9]*]LogSquadTrace: \\[DedicatedServer]ASQGameMode::DetermineMatchWinner\\(\\): (.+) won on (.+)");
             _AllPatterns.Add("playerList", "/ID: ([0-9]+) \\| SteamID: ([0-9]{17}) \\| Name: (.+) \\| Team ID: ([0-9]+) \\| Squad ID: ([0-9]+|N\\/A)");
@@ -71,31 +71,23 @@ namespace SquadCSharpDiscord
             String _SQL;
             switch (stringType)
             {
-                case "playerDied":
-                    if (substring[5].Equals("nullptr"))
-                        break;
-                    string victimResult, attackerResult, cIDResult;
-                    if (UserWithTeam.TryGetValue(substring[2], out victimResult))
+                case "playerWounded":
+                    string victimResult;
+                    if (UserWithTeam.TryGetValue(substring[3], out victimResult))
                     {
-                        C_IDWithUser.TryGetValue(substring[4], out cIDResult);
-                        if (String.IsNullOrEmpty(cIDResult)) { attackerResult = ""; } else { UserWithTeam.TryGetValue(cIDResult, out attackerResult); }
-
-
-                        if (String.IsNullOrEmpty(attackerResult))
+                        handleTeamKills(substring, substring[3], victimResult);
+                    }
+                    else
+                    {
+                        foreach (var player in UserWithTeam)
                         {
-                            sendMessageTeamKill(substring[2], cIDResult);
-                            Console.WriteLine("There was a Potential TeamKill");
-                            Console.WriteLine("The Victim Team was: " + victimResult);
-                            Console.WriteLine(line);
-                            break;
-                        }
-                        if (String.IsNullOrEmpty(victimResult)) { }
+                            //Console.WriteLine("The player is: " + player);
+                            if (substring[3].Contains(player.Key))
+                            {
 
-                        if (victimResult.Equals(attackerResult))
-                        {
-                            sendMessageTeamKill(substring[2], cIDResult);
-                            Console.WriteLine("There was a TeamKill");
-                            Console.WriteLine(line);
+                                handleTeamKills(substring, player.Key, player.Value);
+                                break;
+                            }
                         }
                     }
                     break;
@@ -233,19 +225,65 @@ namespace SquadCSharpDiscord
                     }
                     break;
                 default:
+                    Console.WriteLine(line);
                     break;
             }
         }
 
+        private void handleTeamKills(string[] substring, string victimName, string victimTeam)
+        {
+            string attackerResult, cIDResult;
+            // Console.WriteLine("I'm inside and found player and his team: " + victimName + " : " + victimTeam);
+            C_IDWithUser.TryGetValue(substring[4], out cIDResult);
+            if (String.IsNullOrEmpty(cIDResult)) { attackerResult = ""; } else { UserWithTeam.TryGetValue(cIDResult, out attackerResult); }
+
+
+            if (String.IsNullOrEmpty(attackerResult))
+            {
+                // _unidenfiedKiller += "Attacker is not part of PlayerList/TeamList; Their ID is: " + substring[4] + " ---  The Victim is: " + victimName + ":" + victimTeam + " \n";
+                // System.IO.File.WriteAllText(@"C:\Users\FubarP\Documents\SquadTestFiles\AttackerOnly.txt", _unidenfiedKiller);
+            }
+            else
+            if (String.IsNullOrEmpty(victimTeam))
+            {
+                // Console.WriteLine("I'm Inside this victimResult thing");
+                // _unidenfiedVictim += "The Victim is Unknown in this situation, their name is: " + victimTeam + "\n";
+                // System.IO.File.WriteAllText(@"C:\Users\FubarP\Documents\SquadTestFiles\VictimOnly.txt", _unidenfiedVictim);
+            }
+            else
+            if (victimTeam.Equals(attackerResult))
+            {
+                // _TeamKill += "True TK, Maybe?, Attacker: " + cIDResult + ":" + attackerResult + " -- The Victim: " + victimName + ":" + victimTeam + "\n";
+                // System.IO.File.WriteAllText(@"C:\Users\FubarP\Documents\SquadTestFiles\RealTeamKills.txt", _TeamKill);
+                sendMessageTeamKill(victimName, cIDResult);
+            }
+            else
+            {
+                // _unidenfiedKill += "We don't know -- The Attacker: " + cIDResult + ":" + attackerResult + " and the Victim: " + victimName + ":" + victimTeam + "--- The weapon: " + substring[5] + "\n";
+                // System.IO.File.WriteAllText(@"C:\Users\FubarP\Documents\SquadTestFiles\UnidenfitedKills.txt", _unidenfiedKill);
+            }
+
+        }
+
+
         public async Task sendMessageAdmin(string[] _subString)
         {
-            var returnValue ="```" + _subString[2] + " Has Entered Admin Cam at:: " + DateTime.Now.ToString("ddd, dd MMM yyy HH’:’mm’:’ss ‘GMT’" + "```");
+            var returnValue = "```" + _subString[2] + " Has Entered Admin Cam at:: " + DateTime.Now.ToString("ddd, dd MMM yyy HH’:’mm’:’ss ‘GMT’" + "```");
 
             var AdminCam = await Client.GetChannelAsync(787524708546510848);
             await Client.SendMessageAsync(AdminCam, returnValue);
         }
 
         public async Task sendMessageTeamKill(string Victim, string Attacker)
+        {
+            var returnValue = "```" + Victim + " \nWas Killed by:\n" + Attacker + "```";
+
+
+            var TeamKill = await Client.GetChannelAsync(787524643564814366);
+            await Client.SendMessageAsync(TeamKill, returnValue);
+        }
+
+        public async Task sendMessagePotentialTeamKill(string Victim, string Attacker)
         {
             var returnValue = "```" + Victim + " \nWas Killed by:\n" + Attacker + "```";
 
